@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>入室管理システム</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e3a5f;
+    --accent: #00d4ff;
+    --accent2: #0099cc;
+    --success: #00e676;
+    --danger: #ff4444;
+    --warning: #ffaa00;
+    --text: #e0f0ff;
+    --text-dim: #6b8ba4;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* 背景グリッド */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  .header {
+    text-align: center;
+    padding: 30px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 30px;
+  }
+
+  .header-title {
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    margin-bottom: 8px;
+  }
+
+  .header-date {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .header-time {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 18px;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+
+  /* カード */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+
+  /* ボタン */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: var(--glow);
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  .btn-success {
+    background: var(--success);
+    color: var(--bg);
+  }
+
+  .btn-danger {
+    background: var(--danger);
+    color: #fff;
+  }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn + .btn { margin-top: 10px; }
+
+  /* カメラ */
+  #video {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #000;
+    display: block;
+  }
+
+  <meta http-equiv="Feature-Policy" content="camera *">
+
+  #canvas { display: none; }
+
+  /* ステータス */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 12px;
+  }
+
+  .status-badge::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .status-info { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+  .status-success { background: rgba(0,230,118,0.1); color: var(--success); border: 1px solid rgba(0,230,118,0.2); }
+  .status-danger { background: rgba(255,68,68,0.1); color: var(--danger); border: 1px solid rgba(255,68,68,0.2); }
+  .status-warning { background: rgba(255,170,0,0.1); color: var(--warning); border: 1px solid rgba(255,170,0,0.2); }
+
+  /* 体調チェック */
+  .health-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .health-item:last-child { border-bottom: none; }
+
+  .health-question {
+    font-size: 15px;
+    flex: 1;
+  }
+
+  .health-toggle {
+    display: flex;
+    gap: 8px;
+  }
+
+  .toggle-btn {
+    width: 52px;
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+    color: var(--text-dim);
+  }
+
+  .toggle-btn.selected-yes {
+    background: rgba(0,230,118,0.15);
+    border-color: var(--success);
+    color: var(--success);
+  }
+
+  .toggle-btn.selected-no {
+    background: rgba(255,68,68,0.15);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  /* 登録フォーム */
+  .form-group { margin-bottom: 16px; }
+
+  .form-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+
+  /* 識別写真リスト */
+  .member-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .member-item {
+    text-align: center;
+    padding: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .member-item:hover { border-color: var(--accent); }
+
+  .member-item img {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto 6px;
+    border: 2px solid var(--border);
+  }
+
+  .member-item span {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* スピナー */
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 20px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* アイコン大 */
+  .icon-xl {
+    font-size: 64px;
+    text-align: center;
+    margin: 20px 0;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  .text-center { text-align: center; }
+  .text-dim { color: var(--text-dim); font-size: 13px; }
+  .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+
+  /* 顔プレビュー */
+  #face-preview {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--accent);
+    display: block;
+    margin: 16px auto;
+  }
+
+  /* スクリーン管理 */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* アニメーション */
+  .screen.active {
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-icon {
+    font-size: 80px;
+    text-align: center;
+    margin: 20px 0;
+    animation: bounceIn 0.5s ease;
+  }
+  @keyframes bounceIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ヘッダー（常時表示） -->
+  <div class="header">
+    <div class="header-title">ACCESS CONTROL SYSTEM</div>
+    <div class="header-date" id="header-date">--</div>
+    <div class="header-time" id="header-time">--:--:--</div>
+  </div>
+
+  <!-- ===== SCREEN: TOP ===== -->
+  <div id="screen-top" class="screen active">
+    <div class="card">
+      <div class="card-title">// 入室手続き</div>
+      <button class="btn btn-primary" onclick="startEntry()">🚪 入室する</button>
+      <button class="btn btn-outline" style="margin-top:10px" onclick="showScreen('screen-register')">👤 新規登録</button>
+      <button class="btn btn-outline" onclick="showScreen('screen-members')">📋 登録者一覧</button>
+    </div>
+    <div class="card">
+      <div class="card-title">// システム状態</div>
+      <div class="text-dim">Gemini APIキー: <span style="color:var(--success)">● 設定済み</span></div>
+      <div class="text-dim mt-8">GASログ: <span style="color:var(--success)">● 接続済み</span></div>
+      <div class="text-dim mt-8">登録者数: <span id="member-count" style="color:var(--accent)">0</span> 名</div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: CAMERA（顔認証） ===== -->
+  <div id="screen-camera" class="screen">
+    <div class="card">
+      <div class="card-title">// 顔認証</div>
+      <video id="video" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+      <div id="camera-status" class="status-badge status-info">カメラ起動中</div>
+      <div style="margin-top:16px">
+        <button class="btn btn-primary" id="capture-btn" onclick="captureAndVerify()">📷 認証する</button>
+        <button class="btn btn-outline" onclick="goBack()">← 戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: VERIFYING（認証中） ===== -->
+  <div id="screen-verifying" class="screen">
+    <div class="card text-center">
+      <div class="card-title">// AI認証中</div>
+      <div class="spinner"></div>
+      <p>Gemini AIが顔を分析しています...</p>
+      <p class="text-dim mt-8">しばらくお待ちください</p>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: HEALTH CHECK ===== -->
+  <div id="screen-health" class="screen">
+    <div class="card">
+      <div class="card-title">// 体調チェック</div>
+      <p style="margin-bottom:16px">本日最初の入室です。体調を確認してください。</p>
+
+      <div class="health-item">
+        <div class="health-question">① 体調は良好ですか？</div>
+        <div class="health-toggle">
+          <button class="toggle-btn" id="q1-yes" onclick="setHealth(1,'yes')">〇</button>
+          <button class="toggle-btn" id="q1-no" onclick="setHealth(1,'no')">✕</button>
+        </div>
+      </div>
+      <div class="health-item">
+        <div class="health-question">② 咳は出ていませんか？</div>
+        <div class="health-toggle">
+          <button class="toggle-btn" id="q2-yes" onclick="setHealth(2,'yes')">〇</button>
+          <button class="toggle-btn" id="q2-no" onclick="setHealth(2,'no')">✕</button>
+        </div>
+      </div>
+      <div class="health-item">
+        <div class="health-question">③ 十分な睡眠が取れていますか？</div>
+        <div class="health-toggle">
+          <button class="toggle-btn" id="q3-yes" onclick="setHealth(3,'yes')">〇</button>
+          <button class="toggle-btn" id="q3-no" onclick="setHealth(3,'no')">✕</button>
+        </div>
+      </div>
+      <div class="health-item">
+        <div class="health-question">④ 頭痛はありませんか？</div>
+        <div class="health-toggle">
+          <button class="toggle-btn" id="q4-yes" onclick="setHealth(4,'yes')">〇</button>
+          <button class="toggle-btn" id="q4-no" onclick="setHealth(4,'no')">✕</button>
+        </div>
+      </div>
+      <div class="health-item">
+        <div class="health-question">⑤ 視力に問題はありませんか？</div>
+        <div class="health-toggle">
+          <button class="toggle-btn" id="q5-yes" onclick="setHealth(5,'yes')">〇</button>
+          <button class="toggle-btn" id="q5-no" onclick="setHealth(5,'no')">✕</button>
+        </div>
+      </div>
+
+      <div style="margin-top:20px">
+        <button class="btn btn-primary" onclick="submitHealth()">確認して入室</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: SUCCESS ===== -->
+  <div id="screen-success" class="screen">
+    <div class="card text-center">
+      <div class="card-title">// 入室完了</div>
+      <div class="result-icon">✅</div>
+      <h2 id="success-name" style="font-size:24px;margin-bottom:8px">--</h2>
+      <p id="success-msg" class="text-dim">入室が記録されました</p>
+      <div class="divider"></div>
+      <button class="btn btn-primary" onclick="showScreen('screen-top');resetAll()">トップに戻る</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: DENIED ===== -->
+  <div id="screen-denied" class="screen">
+    <div class="card text-center">
+      <div class="card-title">// 入室不可</div>
+      <div class="result-icon">🚫</div>
+      <h2 style="color:var(--danger);margin-bottom:8px">体調不良のため入室できません</h2>
+      <p class="text-dim" id="denied-reason">いくつかの項目で問題が検出されました</p>
+      <div class="divider"></div>
+      <button class="btn btn-danger" onclick="showScreen('screen-top');resetAll()">トップに戻る</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: UNKNOWN（未登録者） ===== -->
+  <div id="screen-unknown" class="screen">
+    <div class="card text-center">
+      <div class="card-title">// 未登録者</div>
+      <div class="result-icon">❓</div>
+      <p style="margin-bottom:16px">登録されていません。<br>外部入室者として新規登録してください。</p>
+      <button class="btn btn-primary" onclick="startGuestRegister()">新規登録して入室</button>
+      <button class="btn btn-outline" onclick="showScreen('screen-top');resetAll()">キャンセル</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: REGISTER（新規登録） ===== -->
+  <div id="screen-register" class="screen">
+    <div class="card">
+      <div class="card-title">// 新規登録</div>
+
+      <div class="form-group">
+        <label class="form-label">氏名</label>
+        <input class="form-input" id="reg-name" type="text" placeholder="例：山田 太郎">
+      </div>
+      <div class="form-group">
+        <label class="form-label">種別</label>
+        <select class="form-input" id="reg-type">
+          <option value="社員">社員</option>
+          <option value="外部">外部入室者</option>
+          <option value="訪問者">訪問者</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">顔写真を撮影</label>
+        <video id="reg-video" autoplay playsinline style="width:100%;border-radius:8px;border:1px solid var(--border);background:#000;"></video>
+        <canvas id="reg-canvas" style="display:none"></canvas>
+        <img id="face-preview" src="" style="display:none">
+        <button class="btn btn-outline" style="margin-top:10px" onclick="captureRegFace()">📷 顔を撮影</button>
+      </div>
+
+      <button class="btn btn-success" onclick="saveRegistration()">登録して入室へ</button>
+      <button class="btn btn-outline" onclick="goBack()">← 戻る</button>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN: MEMBERS ===== -->
+  <div id="screen-members" class="screen">
+    <div class="card">
+      <div class="card-title">// 登録者一覧</div>
+      <div id="members-grid" class="member-list"></div>
+      <div class="divider"></div>
+      <button class="btn btn-outline" onclick="showScreen('screen-top')">← 戻る</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="text/javascript">
+// ========== 設定 ==========
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxk6cYoUNi2h8iCjFvjeocJVbkiq2ADKIshBHAWqow4-8SOMULdK-OelFsVe35iMLWo_A/exec';
+const SPREADSHEET_ID = '16dvNB8BE8PblasvDDdvm5o0E8GMVgtf36HWHHLfhQ4JM';
+
+// ========== 状態 ==========
+let currentUser = null;
+let healthAnswers = {};
+let capturedImageBase64 = null;
+let regFaceCaptured = false;
+let regFaceBase64 = null;
+let isGuestMode = false;
+let stream = null;
+let regStream = null;
+let previousScreen = 'screen-top';
+
+// ========== 時計 ==========
+function updateClock() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
+  const timeStr = now.toLocaleTimeString('ja-JP');
+  document.getElementById('header-date').textContent = dateStr;
+  document.getElementById('header-time').textContent = timeStr;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ========== 登録者データ ==========
+function getMembers() {
+  return JSON.parse(localStorage.getItem('members') || '[]');
+}
+function saveMembers(members) {
+  localStorage.setItem('members', JSON.stringify(members));
+}
+function updateMemberCount() {
+  document.getElementById('member-count').textContent = getMembers().length;
+}
+updateMemberCount();
+
+// ========== 本日のチェック済み記録 ==========
+function getTodayChecked() {
+  const today = new Date().toDateString();
+  const data = JSON.parse(localStorage.getItem('todayChecked') || '{}');
+  if (data.date !== today) return {};
+  return data.names || {};
+}
+function setTodayChecked(name) {
+  const today = new Date().toDateString();
+  const data = JSON.parse(localStorage.getItem('todayChecked') || '{}');
+  if (data.date !== today) {
+    localStorage.setItem('todayChecked', JSON.stringify({ date: today, names: { [name]: true } }));
+  } else {
+    data.names[name] = true;
+    localStorage.setItem('todayChecked', JSON.stringify(data));
+  }
+}
+
+// ========== スクリーン切替 ==========
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // カメラ停止
+  if (id !== 'screen-camera' && stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+  if (id !== 'screen-register' && regStream) {
+    regStream.getTracks().forEach(t => t.stop());
+    regStream = null;
+  }
+}
+
+function goBack() {
+  showScreen('screen-top');
+  resetAll();
+}
+
+function resetAll() {
+  currentUser = null;
+  healthAnswers = {};
+  capturedImageBase64 = null;
+  regFaceCaptured = false;
+  regFaceBase64 = null;
+  isGuestMode = false;
+  // ヘルスボタンリセット
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById(`q${i}-yes`).className = 'toggle-btn';
+    document.getElementById(`q${i}-no`).className = 'toggle-btn';
+  }
+  updateMemberCount();
+}
+
+// ========== 入室開始 ==========
+function startEntry() {
+  previousScreen = 'screen-top';
+  showScreen('screen-camera');
+  startCamera();
+}
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    document.getElementById('video').srcObject = stream;
+    document.getElementById('camera-status').textContent = '📷 カメラ準備完了 - 顔を映してください';
+  } catch(e) {
+    document.getElementById('camera-status').textContent = '⚠️ カメラにアクセスできません';
+    document.getElementById('camera-status').className = 'status-badge status-danger';
+  }
+}
+
+// ========== 撮影 & Gemini認証 ==========
+async function captureAndVerify() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+  showScreen('screen-verifying');
+
+  try {
+    const resp = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'verify',
+        imageBase64: capturedImageBase64
+      })
+    });
+
+    const result = await resp.json();
+
+    if (result.found) {
+      currentUser = { name: result.name, type: result.type || '社員' };
+      const checked = getTodayChecked();
+      if (checked[currentUser.name]) {
+        await recordLog({ ...currentUser, result: '入室（体調確認済）' });
+        document.getElementById('success-name').textContent = `${currentUser.name} さん`;
+        document.getElementById('success-msg').textContent = '入室が記録されました（体調確認済）';
+        showScreen('screen-success');
+      } else {
+        showScreen('screen-health');
+      }
+    } else {
+      showScreen('screen-unknown');
+    }
+  } catch(e) {
+    console.error(e);
+    showScreen('screen-unknown');
+  }
+}
+
+// ========== 体調チェック ==========
+function setHealth(q, val) {
+  healthAnswers[q] = val;
+  const yes = document.getElementById(`q${q}-yes`);
+  const no = document.getElementById(`q${q}-no`);
+  yes.className = 'toggle-btn' + (val === 'yes' ? ' selected-yes' : '');
+  no.className = 'toggle-btn' + (val === 'no' ? ' selected-no' : '');
+}
+
+async function submitHealth() {
+  // 全問回答チェック
+  for (let i = 1; i <= 5; i++) {
+    if (!healthAnswers[i]) {
+      alert(`質問${i}に回答してください`);
+      return;
+    }
+  }
+
+  const ng = Object.values(healthAnswers).filter(v => v === 'no').length;
+  const result = ng > 0 ? 'NG' : 'OK';
+
+  const healthLog = {
+    q1: healthAnswers[1] === 'yes' ? '〇' : '✕',
+    q2: healthAnswers[2] === 'yes' ? '〇' : '✕',
+    q3: healthAnswers[3] === 'yes' ? '〇' : '✕',
+    q4: healthAnswers[4] === 'yes' ? '〇' : '✕',
+    q5: healthAnswers[5] === 'yes' ? '〇' : '✕',
+  };
+
+  await recordLog({
+    name: currentUser?.name || '不明',
+    type: currentUser?.type || '外部',
+    ...healthLog,
+    result: result === 'OK' ? '入室許可' : '入室拒否（体調不良）'
+  });
+
+  if (result === 'OK') {
+    setTodayChecked(currentUser?.name || '不明');
+    document.getElementById('success-name').textContent = `${currentUser?.name || '不明'} さん`;
+    document.getElementById('success-msg').textContent = '体調チェック完了 - 入室が記録されました';
+    showScreen('screen-success');
+  } else {
+    const reasons = [];
+    if (healthAnswers[1] === 'no') reasons.push('体調不良');
+    if (healthAnswers[2] === 'no') reasons.push('咳あり');
+    if (healthAnswers[3] === 'no') reasons.push('睡眠不足');
+    if (healthAnswers[4] === 'no') reasons.push('頭痛あり');
+    if (healthAnswers[5] === 'no') reasons.push('視力問題');
+    document.getElementById('denied-reason').textContent = '理由: ' + reasons.join('、');
+    showScreen('screen-denied');
+  }
+}
+
+// ========== GASログ記録 ==========
+async function recordLog(data) {
+  const now = new Date();
+  const payload = {
+    action: 'log',   // ← これを追加
+    timestamp: now.toLocaleString('ja-JP'),
+    name: data.name || '',
+    type: data.type || '',
+    q1: data.q1 || '-',
+    q2: data.q2 || '-',
+    q3: data.q3 || '-',
+    q4: data.q4 || '-',
+    q5: data.q5 || '-',
+    result: data.result || ''
+  };
+
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch(e) {
+    console.warn('ログ送信失敗:', e);
+  }
+}
+
+// ========== 未登録者 → 新規登録 ==========
+function startGuestRegister() {
+  isGuestMode = true;
+  document.getElementById('reg-type').value = '外部';
+  showScreen('screen-register');
+  startRegCamera();
+}
+
+async function startRegCamera() {
+  try {
+    regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    document.getElementById('reg-video').srcObject = regStream;
+  } catch(e) {
+    alert('カメラにアクセスできません');
+  }
+}
+
+function captureRegFace() {
+  const video = document.getElementById('reg-video');
+  const canvas = document.getElementById('reg-canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  regFaceBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+  regFaceCaptured = true;
+
+  const preview = document.getElementById('face-preview');
+  preview.src = canvas.toDataURL('image/jpeg', 0.8);
+  preview.style.display = 'block';
+  document.getElementById('reg-video').style.display = 'none';
+}
+
+function saveRegistration() {
+  const name = document.getElementById('reg-name').value.trim();
+  const type = document.getElementById('reg-type').value;
+
+  if (!name) { alert('氏名を入力してください'); return; }
+  if (!regFaceCaptured) { alert('顔写真を撮影してください'); return; }
+
+  const members = getMembers();
+  members.push({ name, type, face: regFaceBase64, registeredAt: new Date().toISOString() });
+  saveMembers(members);
+  updateMemberCount();
+
+  currentUser = { name, type };
+
+  if (isGuestMode) {
+    showScreen('screen-health');
+  } else {
+    document.getElementById('success-name').textContent = `${name} さん`;
+    document.getElementById('success-msg').textContent = '登録が完了しました';
+    showScreen('screen-success');
+  }
+}
+
+// ========== 登録者一覧 ==========
+function showScreen_members() {
+  const members = getMembers();
+  const grid = document.getElementById('members-grid');
+  if (members.length === 0) {
+    grid.innerHTML = '<p class="text-dim">登録者がいません</p>';
+  } else {
+    grid.innerHTML = members.map((m, i) => `
+      <div class="member-item">
+        <img src="data:image/jpeg;base64,${m.face}" alt="${m.name}">
+        <span>${m.name}</span>
+        <span style="color:var(--accent);font-size:10px">${m.type}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// showScreenをオーバーライドして一覧表示時にデータ更新
+const origShowScreen = showScreen;
+window.showScreen = function(id) {
+  origShowScreen(id);
+  if (id === 'screen-members') showScreen_members();
+  if (id === 'screen-register' && !isGuestMode) {
+    startRegCamera();
+    document.getElementById('reg-video').style.display = 'block';
+    document.getElementById('face-preview').style.display = 'none';
+    regFaceCaptured = false;
+    regFaceBase64 = null;
+    document.getElementById('reg-name').value = '';
+  }
+};
+
+// GAS対応：グローバル関数を明示的に公開
+window.startEntry = startEntry;
+window.goBack = goBack;
+window.resetAll = resetAll;
+window.captureAndVerify = captureAndVerify;
+window.setHealth = setHealth;
+window.submitHealth = submitHealth;
+window.startGuestRegister = startGuestRegister;
+window.captureRegFace = captureRegFace;
+window.saveRegistration = saveRegistration;
+
+</script>
+</body>
+</html>
