@@ -664,8 +664,9 @@ async function captureAndVerify() {
 
   try {
     // GASはno-corsだとレスポンス読めないのでGETパラメータで送る
-    const resp = await fetch(GAS_URL + '?action=verify', {
+    const resp = await fetch(GAS_URL, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain' }, // ← GASのCORS回避にはtext/plainが安定
       body: JSON.stringify({ action: 'verify', imageBase64: capturedImageBase64 })
     });
 
