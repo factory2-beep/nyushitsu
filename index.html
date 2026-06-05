@@ -634,9 +634,14 @@ function startEntry() {
 
 async function startCamera() {
   try {
+    // キャンバスを隠してビデオを表示
+    document.getElementById('canvas').style.display = 'none';
+    document.getElementById('video').style.display = 'block';
+    
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
     document.getElementById('video').srcObject = stream;
     document.getElementById('camera-status').textContent = '📷 カメラ準備完了 - 顔を映してください';
+    document.getElementById('camera-status').className = 'status-badge status-info';
   } catch(e) {
     document.getElementById('camera-status').textContent = '⚠️ カメラにアクセスできません';
     document.getElementById('camera-status').className = 'status-badge status-danger';
