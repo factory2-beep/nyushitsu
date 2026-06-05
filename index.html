@@ -652,16 +652,16 @@ async function captureAndVerify() {
   canvas.getContext('2d').drawImage(video, 0, 0);
   capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
+  // カメラ映像を隠す
+  video.style.display = 'none';
+
   showScreen('screen-verifying');
 
   try {
-    const resp = await fetch(GAS_URL, {
+    // GASはno-corsだとレスポンス読めないのでGETパラメータで送る
+    const resp = await fetch(GAS_URL + '?action=verify', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'verify',
-        imageBase64: capturedImageBase64
-      })
+      body: JSON.stringify({ action: 'verify', imageBase64: capturedImageBase64 })
     });
 
     const result = await resp.json();
@@ -683,9 +683,11 @@ async function captureAndVerify() {
   } catch(e) {
     console.error(e);
     showScreen('screen-unknown');
+  } finally {
+    // カメラ映像を再表示（戻ったとき用）
+    video.style.display = 'block';
   }
 }
-
 // ========== 体調チェック ==========
 function setHealth(q, val) {
   healthAnswers[q] = val;
