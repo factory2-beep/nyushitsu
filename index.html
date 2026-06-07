@@ -663,13 +663,19 @@ async function captureAndVerify() {
   showScreen('screen-verifying');
 
   try {
-    // GASはno-corsだとレスポンス読めないのでGETパラメータで送る
-    const resp = await fetch(GAS_URL, {
+    // no-corsでPOST（画像をGASに送る）
+    await fetch(GAS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' }, // ← GASのCORS回避にはtext/plainが安定
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'verify', imageBase64: capturedImageBase64 })
     });
 
+    // GASの処理を待つ（Gemini APIの処理時間を考慮）
+    await new Promise(r => setTimeout(r, 8000));
+
+    // GETで結果を取得（CORSフリー）
+    const resp = await fetch(GAS_URL + '?action=getResult');
     const result = await resp.json();
 
     if (result.found) {
