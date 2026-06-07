@@ -672,11 +672,15 @@ async function captureAndVerify() {
     });
 
     // GASの処理を待つ（Gemini APIの処理時間を考慮）
+    console.log('GAS処理待ち開始...');
     await new Promise(r => setTimeout(r, 8000));
+    console.log('GAS処理待ち完了、結果取得中...');
 
     // GETで結果を取得（CORSフリー）
     const resp = await fetch(GAS_URL + '?action=getResult');
-    const result = await resp.json();
+    const resultText = await resp.text();
+    console.log('GAS結果:', resultText);
+    const result = JSON.parse(resultText);
 
     if (result.found) {
       currentUser = { name: result.name, type: result.type || '社員' };
