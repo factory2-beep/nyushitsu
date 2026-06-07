@@ -807,17 +807,27 @@ function captureRegFace() {
   document.getElementById('reg-video').style.display = 'none';
 }
 
-function saveRegistration() {
+async function saveRegistration() {
   const name = document.getElementById('reg-name').value.trim();
   const type = document.getElementById('reg-type').value;
 
   if (!name) { alert('氏名を入力してください'); return; }
   if (!regFaceCaptured) { alert('顔写真を撮影してください'); return; }
 
-  const members = getMembers();
-  members.push({ name, type, face: regFaceBase64, registeredAt: new Date().toISOString() });
-  saveMembers(members);
-  updateMemberCount();
+  try {
+    const resp = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'saveFace', imageBase64: regFaceBase64, name, type })
+    });
+    const result = await resp.json();
+    if (result.status !== 'ok') throw new Error('保存失敗');
+  } catch(e) {
+    alert('登録に失敗しました: ' + e.message);
+    return;
+  }
+
+  currentUser = { name, type };
 
   currentUser = { name, type };
 
