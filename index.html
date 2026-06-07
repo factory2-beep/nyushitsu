@@ -815,20 +815,17 @@ async function saveRegistration() {
   if (!regFaceCaptured) { alert('顔写真を撮影してください'); return; }
 
   try {
-    const resp = await fetch(GAS_URL, {
+    await fetch(GAS_URL, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'saveFace', imageBase64: regFaceBase64, name, type })
     });
-    const result = await resp.json();
-    if (result.status !== 'ok') throw new Error('保存失敗');
   } catch(e) {
     alert('登録に失敗しました: ' + e.message);
     return;
   }
-
-  currentUser = { name, type };
-
+  
   currentUser = { name, type };
 
   if (isGuestMode) {
