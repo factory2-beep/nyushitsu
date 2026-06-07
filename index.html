@@ -515,11 +515,15 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">顔写真を撮影</label>
+        <label class="form-label">顔写真を撮影 または アップロード</label>
         <video id="reg-video" autoplay playsinline style="width:100%;border-radius:8px;border:1px solid var(--border);background:#000;"></video>
         <canvas id="reg-canvas" style="display:none"></canvas>
         <img id="face-preview" src="" style="display:none">
         <button class="btn btn-outline" style="margin-top:10px" onclick="captureRegFace()">📷 顔を撮影</button>
+        <div style="margin-top:10px;padding:12px;border:1px dashed var(--border);border-radius:8px;text-align:center">
+          <p class="text-dim" style="margin-bottom:8px">または画像ファイルを選択</p>
+          <input type="file" id="reg-upload" accept="image/*" style="color:var(--text);width:100%" onchange="loadRegUpload(this)">
+        </div>
       </div>
 
       <button class="btn btn-success" onclick="saveRegistration()">登録して入室へ</button>
@@ -554,6 +558,24 @@ let isGuestMode = false;
 let stream = null;
 let regStream = null;
 let previousScreen = 'screen-top';
+
+// ========== 画像アップロード ==========
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('upload-image').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const preview = document.getElementById('upload-preview');
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      // base64からヘッダーを除去して保存
+      capturedImageBase64 = e.target.result.split(',')[1];
+      console.log('画像読み込み完了:', capturedImageBase64.substring(0, 30));
+    };
+    reader.readAsDataURL(file);
+  });
+});
 
 // ========== 時計 ==========
 function updateClock() {
@@ -656,15 +678,23 @@ async function startCamera() {
 
 // ========== 撮影 & Gemini認証 ==========
 async function captureAndVerify() {
+  console.log('captureAndVerify開始');
   const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  canvas.width = video.videoWidth || 640;
-  canvas.height = video.videoHeight || 480;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
-  // カメラ映像を隠す
-  video.style.display = 'none';
+  // カメラが使えればカメラ優先、なければアップロード画像を使用
+  if (video.videoWidth > 0) {
+    const canvas = document.getElementById('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+    video.style.display = 'none';
+  } else if (capturedImageBase64) {
+    console.log('アップロード画像で認証');
+  } else {
+    alert('カメラが使えません。画像ファイルを選択してください。');
+    return;
+  }
 
   showScreen('screen-verifying');
 
@@ -816,6 +846,22 @@ function captureRegFace() {
   canvas.getContext('2d').drawImage(video, 0, 0);
   regFaceBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
   regFaceCaptured = true;
+
+  function loadRegUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    regFaceBase64 = e.target.result.split(',')[1];
+    regFaceCaptured = true;
+    const preview = document.getElementById('face-preview');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+    document.getElementById('reg-video').style.display = 'none';
+    console.log('登録用画像読み込み完了');
+  };
+  reader.readAsDataURL(file);
+}
 
   const preview = document.getElementById('face-preview');
   preview.src = canvas.toDataURL('image/jpeg', 0.8);
