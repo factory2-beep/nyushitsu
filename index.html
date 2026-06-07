@@ -811,12 +811,15 @@ async function saveRegistration() {
   const name = document.getElementById('reg-name').value.trim();
   const type = document.getElementById('reg-type').value;
 
+  console.log('saveRegistration開始 name:', name, 'captured:', regFaceCaptured);
+
   if (!name) { alert('氏名を入力してください'); return; }
   if (!regFaceCaptured) { alert('顔写真を撮影してください'); return; }
 
+  console.log('fetch前 regFaceBase64:', regFaceBase64 ? regFaceBase64.substring(0,30) : 'null');
+
   try {
     const body = JSON.stringify({ action: 'saveFace', imageBase64: regFaceBase64, name, type });
-    console.log('送信データ:', body.substring(0, 100)); // 最初の100文字だけ確認
     await fetch(GAS_URL, {
       method: 'POST',
       mode: 'no-cors',
