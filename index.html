@@ -390,13 +390,19 @@
       <video id="video" autoplay playsinline></video>
       <canvas id="canvas"></canvas>
       <div id="camera-status" class="status-badge status-info">カメラ起動中</div>
+
+      <div style="margin-top:16px;padding:16px;border:1px dashed var(--border);border-radius:8px;text-align:center">
+        <p class="text-dim" style="margin-bottom:8px">📁 画像ファイルで認証</p>
+        <input type="file" id="upload-image" accept="image/*" style="color:var(--text);width:100%">
+        <img id="upload-preview" style="display:none;width:120px;height:120px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);margin:12px auto;display:none">
+      </div>
+
       <div style="margin-top:16px">
         <button class="btn btn-primary" id="capture-btn" onclick="captureAndVerify()">📷 認証する</button>
         <button class="btn btn-outline" onclick="goBack()">← 戻る</button>
       </div>
     </div>
   </div>
-
   <!-- ===== SCREEN: VERIFYING（認証中） ===== -->
   <div id="screen-verifying" class="screen">
     <div class="card text-center">
